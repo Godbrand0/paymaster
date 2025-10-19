@@ -1,92 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
+import { COUNTER_ADDRESS } from "./counterABI";
+import { useCounter } from "./hooks";
 import { baseSepolia } from "wagmi/chains";
-import { COUNTER_ABI, COUNTER_ADDRESS } from "./counterABI";
 
 export default function Counter() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
-  const [inputValue, setInputValue] = useState("");
-
-  const isCorrectNetwork = chainId === baseSepolia.id;
-
-  const { data: counterValue, refetch } = useReadContract({
-    address: COUNTER_ADDRESS,
-    abi: COUNTER_ABI,
-    functionName: "getNumber",
-    query: {
-      refetchInterval: 3000,
-      enabled: isCorrectNetwork && !!COUNTER_ADDRESS,
-    },
-  });
-
   const {
-    writeContract,
-    data: hash,
-    isPending: isWritePending,
-    error: writeError,
-    reset,
-  } = useWriteContract();
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
-
-  useEffect(() => {
-    if (isConfirmed) {
-      refetch();
-      // Clear error and reset after successful transaction
-      setTimeout(() => reset(), 3000);
-    }
-  }, [isConfirmed, refetch, reset]);
-
-  const handleIncrement = () => {
-    console.log("🚀 Increment clicked");
-    console.log("Connected:", isConnected);
-    console.log("Correct Network:", isCorrectNetwork);
-    console.log("Contract Address:", COUNTER_ADDRESS);
-    console.log("Chain ID:", chainId);
-
-    if (!isConnected || !isCorrectNetwork) return;
-
-    try {
-      writeContract({
-        address: COUNTER_ADDRESS,
-        abi: COUNTER_ABI,
-        functionName: "increment",
-      });
-      console.log("✅ Write contract called");
-    } catch (error) {
-      console.error("❌ Error calling writeContract:", error);
-    }
-  };
-
-  const handleDecrement = () => {
-    if (!isConnected || !isCorrectNetwork) return;
-
-    writeContract({
-      address: COUNTER_ADDRESS,
-      abi: COUNTER_ABI,
-      functionName: "decrement",
-    });
-  };
-
-  const handleSetNumber = () => {
-    if (!isConnected || !isCorrectNetwork || !inputValue) return;
-
-    const value = BigInt(inputValue);
-    writeContract({
-      address: COUNTER_ADDRESS,
-      abi: COUNTER_ABI,
-      functionName: "setNumber",
-      args: [value],
-    });
-    setInputValue("");
-  };
+    // Input state
+    inputValue,
+    setInputValue,
+    
+    // Wallet state
+    address,
+    isConnected,
+    chainId,
+    isCorrectNetwork,
+    switchToBaseSepolia,
+    
+    // Contract state
+    counterValue,
+    
+    // Transaction state
+    hash,
+    isWritePending,
+    writeError,
+    isConfirming,
+    isConfirmed,
+    
+    // Actions
+    handleIncrement,
+    handleDecrement,
+    handleSetNumber,
+  } = useCounter();
 
   return (
     <div className="flex justify-center items-center min-h-screen px-4 py-8">
@@ -127,7 +72,7 @@ export default function Counter() {
               Please switch to Base Sepolia (Chain ID: {baseSepolia.id})
             </p>
             <button
-              onClick={() => switchChain({ chainId: baseSepolia.id })}
+              onClick={switchToBaseSepolia}
               className="w-full bg-[#0052ff] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0045d9] transition"
             >
               Switch to Base Sepolia
